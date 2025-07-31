@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import signal
+from scipy.signal import butter, filtfilt
 import json
 import os
 from pathlib import Path
@@ -96,7 +97,7 @@ class DataPreprocessor:
     
     def exploratory_check(self) -> Dict:
         """
-        Step 1: Perform exploratory check on all subjects.
+        Perform check on all subjects.
         Returns sampling rate info and creates visualization plots.
         """
         print("Step 1: Exploratory check...")
@@ -143,9 +144,76 @@ class DataPreprocessor:
         print(f"Data check complete. Found sampling rates around {np.mean([info['sampling_rate'] for info in sampling_info.values()]):.0f} Hz")
         return sampling_info
     
+    def apply_bandpass_filter(self, data: np.ndarray, sampling_rate: float) -> np.ndarray:
+        """
+        Apply bandpass filtering to physiological signals with different frequency ranges.
+        
+        Args:
+            data: Array of shape (N_samples, 3) with signals [bp, breath_upper, ppg_fing]
+            sampling_rate: Sampling rate in Hz
+            
+        Returns:
+            Filtered array of same shape
+        """
+        filtered_data = data.copy()
+        
+        if np.any(np.isnan(data)) or np.any(np.isinf(data)):
+            print(f"  Warning: Input data contains NaN or Inf values!")
+            # Replace NaN/Inf with interpolated values
+            for channel_idx in range(data.shape[1]):
+                signal = data[:, channel_idx]
+                if np.any(np.isnan(signal)) or np.any(np.isinf(signal)):
+                    # Simple forward-fill for NaN/Inf values
+                    mask = np.isfinite(signal)
+                    if np.any(mask):
+                        signal = np.interp(np.arange(len(signal)), 
+                                         np.where(mask)[0], 
+                                         signal[mask])
+                        filtered_data[:, channel_idx] = signal
+        
+        filter_configs = {
+            0: {'low': 0.5, 'high': 8.0, 'name': 'bp'},           # bp: 0.5-8 Hz
+            1: {'low': 0.1, 'high': 2.0, 'name': 'breath_upper'}, # breath: 0.1-2 Hz  
+            2: {'low': 0.5, 'high': 8.0, 'name': 'ppg_fing'}      # ppg: 0.5-8 Hz
+        }
+        
+        for channel_idx, config in filter_configs.items():
+            # Calculate normalized frequencies (0-1, where 1 is Nyquist frequency)
+            nyquist = sampling_rate / 2
+            low_norm = config['low'] / nyquist
+            high_norm = config['high'] / nyquist
+            
+            # Ensure frequencies are within valid range
+            low_norm = max(0.001, min(low_norm, 0.99))  # Avoid edge cases
+            high_norm = max(low_norm + 0.001, min(high_norm, 0.99))
+            
+            min_samples_needed = 6  # 3x the filter order (2)
+            if len(filtered_data) < min_samples_needed:
+                print(f"  Warning: Signal too short ({len(filtered_data)} samples) for filtering {config['name']}, skipping")
+                continue
+            
+
+            b, a = butter(2, [low_norm, high_norm], btype='band')
+            
+            # Apply zero-phase filtering to avoid phase distortion
+            filtered_signal = filtfilt(b, a, filtered_data[:, channel_idx])
+            
+            # Check if filtering introduced NaN values
+            if np.any(np.isnan(filtered_signal)) or np.any(np.isinf(filtered_signal)):
+                print(f"  Warning: Filtering introduced NaN/Inf for {config['name']}, skipping filter")
+                # Keep original signal if filtering fails
+                continue
+            else:
+                filtered_data[:, channel_idx] = filtered_signal
+                
+            print(f"  Applied {config['low']}-{config['high']}Hz bandpass filter to {config['name']}")
+            
+        
+        return filtered_data
+
     def downsample_signals(self, data: np.ndarray, original_rate: float) -> np.ndarray:
         """
-        Step 2: Downsample signals to target rate with anti-aliasing.
+        Downsample signals to target rate with anti-aliasing.
         
         Args:
             data: Array of shape (N_samples, 3) with signals
@@ -175,7 +243,7 @@ class DataPreprocessor:
     
     def segment_windows(self, data: np.ndarray) -> np.ndarray:
         """
-        Step 3: Segment data into windows.
+        Segment data into windows.
         
         Args:
             data: Downsampled array of shape (N_samples, 3)
@@ -201,55 +269,71 @@ class DataPreprocessor:
         return windows
     
     def process_subject(self, subject: str, sampling_rate: float) -> np.ndarray:
-        """Process a single subject through downsample and windowing."""
+        """Process a single subject through filtering, downsampling and windowing."""
         df = self.load_subject_data(subject)
         
         signal_data = df[self.signal_cols].values
+        print(f"  Applying bandpass filters to {subject}...")
+        filtered_data = self.apply_bandpass_filter(signal_data, sampling_rate)
         
-        downsampled = self.downsample_signals(signal_data, sampling_rate)
+        downsampled = self.downsample_signals(filtered_data, sampling_rate)
         
         windows = self.segment_windows(downsampled)
         
         return windows
     
-    def compute_normalization_stats(self, train_windows: np.ndarray) -> Dict:
+    def normalize_windows_per_sample(self, windows: np.ndarray) -> np.ndarray:
         """
-        Step 4: Compute normalization statistics from training data only.
+        Apply per-window normalization to focus on signal shape rather than absolute values.
+        Each window is normalized independently using its own statistics.
         
         Args:
-            train_windows: Training windows of shape (n_windows, 3, 240)
+            windows: Array of shape (n_windows, 3, 240)
             
         Returns:
-            Dictionary with mean and std for each channel
+            Normalized array of same shape
         """
-        # Flatten across windows and time, keep channels separate
-        flattened = train_windows.reshape(-1, 3)  # (n_windows * 240, 3)
-        
-        stats = {
-            'mean': flattened.mean(axis=0).tolist(),  # Shape: (3,)
-            'std': flattened.std(axis=0).tolist()     # Shape: (3,)
-        }
-        
-        # Save stats
-        with open(self.out_dir / 'normalization_stats.json', 'w') as f:
-            json.dump(stats, f, indent=2)
-            
-        return stats
-    
-    def normalize_windows(self, windows: np.ndarray, stats: Dict) -> np.ndarray:
-        """Apply normalization using provided statistics."""
         normalized = windows.copy()
-        mean = np.array(stats['mean']).reshape(1, 3, 1)  # Broadcast shape
-        std = np.array(stats['std']).reshape(1, 3, 1)
         
-        normalized = (normalized - mean) / std
+        # Normalize each window independently
+        for i in range(len(windows)):
+            for channel in range(3):
+                signal = windows[i, channel, :]  # Shape: (240,)
+                
+                # Check for NaN or inf values in the signal
+                if np.any(np.isnan(signal)) or np.any(np.isinf(signal)):
+                    print(f"  Warning: NaN/Inf detected in window {i}, channel {channel}, setting to zero")
+                    normalized[i, channel, :] = np.zeros_like(signal)
+                    continue
+                
+                # Calculate per-window statistics
+                mean = signal.mean()
+                std = signal.std()
+                
+                # Check if mean or std are NaN/inf
+                if np.isnan(mean) or np.isinf(mean) or np.isnan(std) or np.isinf(std):
+                    print(f"  Warning: NaN/Inf in statistics for window {i}, channel {channel}, setting to zero")
+                    normalized[i, channel, :] = np.zeros_like(signal)
+                    continue
+                
+                # Avoid division by zero for constant signals
+                if std > 1e-8:
+                    normalized_signal = (signal - mean) / std
+                    # Final check for NaN/inf after normalization
+                    if np.any(np.isnan(normalized_signal)) or np.any(np.isinf(normalized_signal)):
+                        print(f"  Warning: Normalization produced NaN/Inf for window {i}, channel {channel}, setting to zero")
+                        normalized[i, channel, :] = np.zeros_like(signal)
+                    else:
+                        normalized[i, channel, :] = normalized_signal
+                else:
+                    # For constant signals, center around zero
+                    normalized[i, channel, :] = signal - mean
+        
+        print(f"Applied per-window normalization to {len(windows)} windows")
         return normalized
     
     def process_all_subjects(self):
-        """
-        Steps 2-6: Process all subjects through the complete pipeline.
-        """
-        print("Step 2-6: Processing all subjects...")
+        print("Processing all subjects (filter → downsample → window → normalize)...")
         
         # Load sampling info
         with open(self.out_dir / 'sampling_info.json', 'r') as f:
@@ -280,16 +364,11 @@ class DataPreprocessor:
             else:
                 all_windows[split_name] = np.array([]).reshape(0, 3, int(self.window_len * self.target_rate))
         
-        # Compute normalization stats from training data only
-        if len(all_windows['train']) > 0:
-            stats = self.compute_normalization_stats(all_windows['train'])
-        else:
-            raise ValueError("No training windows found!")
-        
-        # Normalize all splits using training stats
+        # Apply per-window normalization to all splits
         for split_name in splits.keys():
             if len(all_windows[split_name]) > 0:
-                all_windows[split_name] = self.normalize_windows(all_windows[split_name], stats)
+                print(f"Normalizing {split_name} split...")
+                all_windows[split_name] = self.normalize_windows_per_sample(all_windows[split_name])
         
         # Save processed data
         for split_name, windows in all_windows.items():
@@ -301,9 +380,9 @@ class DataPreprocessor:
     
     def verify_and_visualize(self):
         """
-        Step 7: Verification and visualization of processed data.
+        Verification and visualization of processed data.
         """
-        print("Step 7: Verification and visualization...")
+        print("Verification and visualization...")
         
         splits = ['train', 'eval', 'test'] 
         fig, axes = plt.subplots(2, 3, figsize=(15, 10))
@@ -317,33 +396,29 @@ class DataPreprocessor:
             data = np.load(data_path)
             windows = data['windows']
             
-            # Check for NaNs/Infs
-            has_nan = np.isnan(windows).any()
-            has_inf = np.isinf(windows).any()
-            print(f"{split}: {windows.shape}, NaN: {has_nan}, Inf: {has_inf}")
-            
             if len(windows) > 0:
-                # Plot a random window
-                rand_idx = np.random.randint(0, len(windows))
-                sample_window = windows[rand_idx]  # Shape: (3, 240)
-                
+                # --- Plot the first window ---
+                sample_window = windows[0]
                 time_axis = np.arange(sample_window.shape[1]) / self.target_rate
+                signal_names = ['bp', 'breath_upper', 'ppg_fing']
                 
-                axes[0, i].plot(time_axis, sample_window[0], label='bp')
-                axes[0, i].plot(time_axis, sample_window[1], label='breath_upper')  
-                axes[0, i].plot(time_axis, sample_window[2], label='ppg_fing')
-                axes[0, i].set_title(f'{split} sample window')
+                for ch_idx, name in enumerate(signal_names):
+                    axes[0, i].plot(time_axis, sample_window[ch_idx], label=f'{name}', alpha=0.7)
+                
+                axes[0, i].set_title(f'{split} Sample Window')
                 axes[0, i].set_xlabel('Time (s)')
                 axes[0, i].legend()
                 axes[0, i].grid(True, alpha=0.2)
                 
-                # Plot distribution
-                axes[1, i].hist(windows.flatten(), bins=50, alpha=0.7, density=True)
-                axes[1, i].set_title(f'{split} value distribution')
+                # --- Plot value distribution ---
+                flat_data = windows.flatten()
+                finite_data = flat_data[np.isfinite(flat_data)]
+                
+                axes[1, i].hist(finite_data, bins=50, alpha=0.7, density=True)
+                axes[1, i].set_title(f'{split} Value Distribution')
                 axes[1, i].set_xlabel('Normalized value')
-                axes[1, i].axvline(0, color='red', linestyle='--', alpha=0.5)
                 axes[1, i].grid(True, alpha=0.2)
-        
+
         plt.tight_layout()
         plt.savefig(self.out_dir / 'verification_plots.png', dpi=150, bbox_inches='tight')
         plt.close()
@@ -384,7 +459,6 @@ class DataPreprocessor:
         """Run the complete preprocessing pipeline."""
         print("Starting full preprocessing pipeline...")
         
-
         self.exploratory_check()
        
         self.process_all_subjects()

@@ -8,11 +8,11 @@ subjects:
     - 'STLE_0250'
     - 'STLW_0341'
     - 'STLE_0140'
-  eval:
     - 'STLE_0223'
+  eval:
+    - 'STLE_0372'
   test:
     - 'SF_0034'
-    - 'STLE_0372'
 
 ###################### Data Preprocessing parameters #####################
 preprocessing:
@@ -24,3 +24,74 @@ preprocessing:
     - 'breath_upper' 
     - 'ppg_fing'
 
+###################### Model Architecture parameters #####################
+model:
+  num_modalities: 3
+  in_channels: 1
+  base_channels: 16
+  blocks_per_stage: [2, 2, 2]
+  input_len: 240
+  latent_dim: 128
+  fusion_type: 'gated'  # options: 'concat', 'gated', 'attention'
+  attention_heads: 4
+
+###################### Training parameters #####################
+training:
+  batch_size: 32
+  num_epochs: 200
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  scheduler_type: 'cosine'  # options: 'cosine', 'step'
+  scheduler_params:
+    T_max: 100  # for cosine
+    step_size: 30  # for step
+    gamma: 0.1  # for step
+    patience: 10  # for plateau
+  
+  # Early stopping
+  early_stopping:
+    patience: 100
+    min_delta: 0.001
+  
+  grad_clip: 1.0
+  
+  num_workers: 4
+  pin_memory: true
+
+###################### Loss function parameters #####################
+loss:
+  modality_weights:
+    bp: 1.0
+    breath_upper: 1.0
+    ppg_fing: 1.0
+  lambda_frequency: 0.2
+  loss_type: 'standard'  # options: 'standard', 'adaptive'
+
+###################### Logging and Checkpointing #####################
+logging:
+  wandb:
+    project: 'MiMo-AE-fusion-gated'
+    entity: 'zhl026-ucsd'  # your wandb username
+    tags: ['multimodal', 'autoencoder']
+    notes: 'Multimodal autoencoder'
+  
+  # Checkpoint settings
+  checkpoint:
+    save_dir: 'checkpoints'
+    save_every_n_epochs: 50
+    save_best: true
+    monitor: 'val_total_loss'  # metric to monitor for best model
+    mode: 'min'  # 'min' or 'max'
+  
+  # Visualization settings
+  visualization:
+    plot_every_n_epochs: 20
+    num_samples_to_plot: 3
+    save_plots: true
+    plot_dir: 'plots'
+
+###################### Paths #####################
+paths:
+  data_dir: 'processed_data'
+  output_dir: 'outputs'
+  
