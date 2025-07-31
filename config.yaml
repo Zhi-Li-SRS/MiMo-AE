@@ -32,8 +32,10 @@ model:
   blocks_per_stage: [2, 2, 2]
   input_len: 240
   latent_dim: 128
+  compressed_channels: 32
   fusion_type: 'gated'  # options: 'concat', 'gated', 'attention'
   attention_heads: 4
+  dropout_rate: 0.2
 
 ###################### Training parameters #####################
 training:
@@ -50,7 +52,7 @@ training:
   
   # Early stopping
   early_stopping:
-    patience: 100
+    patience: 30
     min_delta: 0.001
   
   grad_clip: 1.0
@@ -85,7 +87,7 @@ logging:
   
   # Visualization settings
   visualization:
-    plot_every_n_epochs: 20
+    plot_every_n_epochs: 50
     num_samples_to_plot: 3
     save_plots: true
     plot_dir: 'plots'
