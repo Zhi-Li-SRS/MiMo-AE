@@ -20,6 +20,7 @@ import wandb
 from typing import Dict, List, Tuple, Optional
 import yaml
 import os
+import random
 
 
 class MetricsTracker:
@@ -168,7 +169,7 @@ class CheckpointManager:
         ) -> Tuple[int, Dict[str, float]]:
         
         """Load model checkpoint."""
-        ckpt = torch.load(ckpt_path, map_location='cpu')
+        ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=False)
         
         model.load_state_dict(ckpt['model_state_dict'])
         optimizer.load_state_dict(ckpt['optimizer_state_dict'])
@@ -348,6 +349,24 @@ class ReconVisualizer:
         return fig
 
 
+def set_random_seed(seed: int = 42):
+    
+    print(f"Setting random seed to {seed}")
+    
+    random.seed(seed)
+    
+    np.random.seed(seed)
+    
+    torch.manual_seed(seed)
+    
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)  # 多GPU情况
+        
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+
 # Load config file
 def load_config(config_path: str) -> Dict:
     """Load configuration from YAML file."""
@@ -405,3 +424,7 @@ def create_lr_scheduler(
         )
     else:
         raise ValueError(f"Unknown scheduler type: {scheduler_type}")
+
+if __name__ == '__main__':
+    config = load_config('config.yaml')
+    print(config)

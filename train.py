@@ -39,6 +39,10 @@ class Trainer:
             config_path: Path to configuration YAML file
         """
         self.config = load_config(config_path)
+        
+        if 'random_seed' in self.config['training']:
+            set_random_seed(self.config['training']['random_seed'])
+        
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         print(f"Using device: {self.device}")
         
@@ -62,7 +66,7 @@ class Trainer:
         self.plot_dir = Path(self.output_dir) / self.config['logging']['visualization']['plot_dir']
         
         self.ckpt_dir.mkdir(parents=True, exist_ok=True)
-        self.plot_dir.mkdir(parents=True, exist_ok=True)
+
         
     def _setup_data(self):
         """Setup data loaders."""
@@ -281,11 +285,12 @@ class Trainer:
     
     def _plot_loss_curves(self, epoch: int):
         """Plot and save loss curves."""
+        vis_config = self.config['logging']['visualization']
         save_path = self.plot_dir / f'loss_curves_epoch_{epoch+1}.png'
         fig = self.visualizer.plot_loss_curves(
             self.train_loss_history, 
             self.val_loss_history,
-            save_path=str(save_path)
+            save_path=str(save_path) if vis_config['save_plots'] else None
         )
         
         # Log to wandb
@@ -460,7 +465,7 @@ def main():
         
         # Test with best model
         best_model_path = os.path.join(trainer.ckpt_dir, 'best_model.pth')
-        if best_model_path.exists():
+        if Path(best_model_path).exists():
             trainer.test(str(best_model_path))
 
 

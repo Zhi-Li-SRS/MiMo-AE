@@ -33,8 +33,8 @@ model:
   input_len: 240
   latent_dim: 128
   compressed_channels: 32
-  fusion_type: 'gated'  # options: 'concat', 'gated', 'attention'
-  attention_heads: 4
+  fusion_type: 'attention'  # options: 'concat', 'gated', 'attention'
+  attention_heads: 2
   dropout_rate: 0.2
 
 ###################### Training parameters #####################
@@ -43,6 +43,7 @@ training:
   num_epochs: 200
   learning_rate: 0.001
   weight_decay: 0.0001
+  random_seed: 42  
   scheduler_type: 'cosine'  # options: 'cosine', 'step'
   scheduler_params:
     T_max: 100  # for cosine
@@ -66,13 +67,13 @@ loss:
     bp: 1.0
     breath_upper: 1.0
     ppg_fing: 1.0
-  lambda_frequency: 0.2
+  lambda_frequency: 0.01
   loss_type: 'standard'  # options: 'standard', 'adaptive'
 
 ###################### Logging and Checkpointing #####################
 logging:
   wandb:
-    project: 'MiMo-AE-fusion-gated'
+    project: 'MiMo-AE-fusion-attention'
     entity: 'zhl026-ucsd'  # your wandb username
     tags: ['multimodal', 'autoencoder']
     notes: 'Multimodal autoencoder'
@@ -89,7 +90,7 @@ logging:
   visualization:
     plot_every_n_epochs: 50
     num_samples_to_plot: 3
-    save_plots: true
+    save_plots: false
     plot_dir: 'plots'
 
 ###################### Paths #####################

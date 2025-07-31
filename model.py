@@ -124,14 +124,13 @@ class Decoder(nn.Module):
             nn.Conv1d(base_channels, base_channels, kernel_size=3, padding=1)
         )
         self.final_conv = nn.Conv1d(base_channels, out_channels, kernel_size=7, padding=3)
-        self.tanh = nn.Tanh()
 
     def forward(self, x):
         for layer in self.layers:
             x = layer(x)
         x = self.final_upsample(x)
         x = self.final_conv(x)
-        return self.tanh(x)
+        return x
 
 # --- Main Multimodal Autoencoder Model ---
 class MiMoAE(nn.Module):
