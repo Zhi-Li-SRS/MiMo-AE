@@ -1,0 +1,36 @@
+# Data directories - too large for git
+cleaned_data/
+data/
+processed_data/
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# IDE specific files
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS specific files
+.DS_Store
+.DS_Store?
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+
+# Environment variables
+.env
+.env.*
+!.env.example
