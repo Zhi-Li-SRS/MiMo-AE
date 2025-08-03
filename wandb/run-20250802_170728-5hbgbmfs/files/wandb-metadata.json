@@ -1,0 +1,40 @@
+{
+  "os":  "Linux-6.8.0-60-generic-x86_64-with-glibc2.35",
+  "python":  "CPython 3.10.9",
+  "startedAt":  "2025-08-03T00:07:28.942705Z",
+  "program":  "/home/zhl026/projects/MiMo-AE/train.py",
+  "codePath":  "train.py",
+  "codePathLocal":  "train.py",
+  "git":  {
+    "remote":  "https://github.com/Zhi-Li-SRS/MiMo-AE.git",
+    "commit":  "b46f53d7a43103695efbcf75217231bc5dce96a8"
+  },
+  "email":  "zhl026@ucsd.edu",
+  "root":  "/home/zhl026/projects/MiMo-AE",
+  "host":  "genome-explorer",
+  "executable":  "/opt/anaconda3/bin/python",
+  "cpu_count":  64,
+  "cpu_count_logical":  128,
+  "gpu":  "NVIDIA RTX A6000",
+  "gpu_count":  1,
+  "disk":  {
+    "/":  {
+      "total":  "2014574526464",
+      "used":  "1910004486144"
+    }
+  },
+  "memory":  {
+    "total":  "540625367040"
+  },
+  "gpu_nvidia":  [
+    {
+      "name":  "NVIDIA RTX A6000",
+      "memoryTotal":  "51527024640",
+      "cudaCores":  10752,
+      "architecture":  "Ampere",
+      "uuid":  "GPU-58ad5868-2264-0a31-463a-afb9869c60ac"
+    }
+  ],
+  "cudaVersion":  "12.2",
+  "writerId":  "8x708bbmwd3ddzxh7h33js7nzfrgh8mv"
+}

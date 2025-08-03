@@ -1,0 +1,141 @@
+_wandb:
+    value:
+        cli_version: 0.21.0
+        e:
+            zfto8mvnxuuwvitzaxb4rgr9a864z8ir:
+                codePath: train.py
+                codePathLocal: train.py
+                cpu_count: 64
+                cpu_count_logical: 128
+                cudaVersion: "12.2"
+                disk:
+                    /:
+                        total: "2014574526464"
+                        used: "1909781602304"
+                email: zhl026@ucsd.edu
+                executable: /opt/anaconda3/bin/python
+                git:
+                    commit: b46f53d7a43103695efbcf75217231bc5dce96a8
+                    remote: https://github.com/Zhi-Li-SRS/MiMo-AE.git
+                gpu: NVIDIA RTX A6000
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 10752
+                      memoryTotal: "51527024640"
+                      name: NVIDIA RTX A6000
+                      uuid: GPU-58ad5868-2264-0a31-463a-afb9869c60ac
+                host: genome-explorer
+                memory:
+                    total: "540625367040"
+                os: Linux-6.8.0-60-generic-x86_64-with-glibc2.35
+                program: /home/zhl026/projects/MiMo-AE/train.py
+                python: CPython 3.10.9
+                root: /home/zhl026/projects/MiMo-AE
+                startedAt: "2025-07-31T07:28:56.224672Z"
+                writerId: zfto8mvnxuuwvitzaxb4rgr9a864z8ir
+        m: []
+        python_version: 3.10.9
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 1
+                - 15
+                - 16
+                - 61
+            "4": 3.10.9
+            "5": 0.21.0
+            "12": 0.21.0
+            "13": linux-x86_64
+logging:
+    value:
+        checkpoint:
+            mode: min
+            monitor: val_total_loss
+            save_best: true
+            save_dir: checkpoints
+            save_every_n_epochs: 50
+        visualization:
+            num_samples_to_plot: 3
+            plot_dir: plots
+            plot_every_n_epochs: 50
+            save_plots: false
+        wandb:
+            entity: zhl026-ucsd
+            notes: Multimodal autoencoder
+            project: MiMo-AE-fusion-concat
+            tags:
+                - multimodal
+                - autoencoder
+loss:
+    value:
+        lambda_frequency: 0.01
+        loss_type: standard
+        modality_weights:
+            bp: 1
+            breath_upper: 1
+            ppg_fing: 1
+model:
+    value:
+        attention_heads: 2
+        base_channels: 16
+        blocks_per_stage:
+            - 2
+            - 2
+            - 2
+        compressed_channels: 32
+        dropout_rate: 0.2
+        fusion_type: concat
+        in_channels: 1
+        input_len: 240
+        latent_dim: 128
+        num_modalities: 3
+paths:
+    value:
+        data_dir: processed_data
+        output_dir: outputs
+preprocessing:
+    value:
+        signal_cols:
+            - bp
+            - breath_upper
+            - ppg_fing
+        stride_ratio: 1
+        target_rate: 30
+        window_len: 8
+subjects:
+    value:
+        eval:
+            - STLE_0372
+            - SF_0034
+        train:
+            - STLE_0125
+            - STLE_0094
+            - STL_0053
+            - STLE_0099
+            - STLE_0250
+            - STLW_0341
+            - STLE_0140
+            - STLE_0223
+training:
+    value:
+        batch_size: 32
+        early_stopping:
+            min_delta: 0.001
+            patience: 30
+        grad_clip: 1
+        learning_rate: 0.001
+        num_epochs: 200
+        num_workers: 4
+        pin_memory: true
+        random_seed: 42
+        scheduler_params:
+            T_max: 100
+            gamma: 0.1
+            patience: 10
+            step_size: 30
+        scheduler_type: cosine
+        weight_decay: 0.0001

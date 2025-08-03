@@ -34,7 +34,7 @@ model:
   latent_dim: 128
   compressed_channels: 32
   fusion_type: 'attention'  # options: 'concat', 'gated', 'attention'
-  attention_heads: 2
+  attention_heads: 4
   dropout_rate: 0.2
 
 ###################### Training parameters #####################
@@ -47,7 +47,7 @@ training:
   scheduler_type: 'cosine'  # options: 'cosine', 'step'
   scheduler_params:
     T_max: 100  # for cosine
-    step_size: 30  # for step
+    step_size: 20  # for step
     gamma: 0.1  # for step
     patience: 10  # for plateau
   

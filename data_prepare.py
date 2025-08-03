@@ -20,20 +20,28 @@ import yaml
 class MultimodalDataset(Dataset):
     """PyTorch Dataset for multimodal physiological signals."""
     
-    def __init__(self, data_path: str):
+    def __init__(self, data_path: str, return_labels: bool = False):
         """
         Initialize dataset from .npz file.
-        windows: (N, 3, 240)
+        
         Args:
-            data_path: Path to .npz file containing 'windows' array of shape (N, 3, 240)
+            data_path: Path to .npz file containing 'windows' and 'labels' arrays.
+            return_labels: Whether to return subject labels along with windows.
         """
         data = np.load(data_path)
         self.windows = torch.FloatTensor(data['windows'])
+        self.return_labels = return_labels
+        if self.return_labels and 'labels' in data:
+            self.labels = torch.LongTensor(data['labels'])
+        else:
+            self.labels = torch.zeros(len(self.windows), dtype=torch.long)
         
     def __len__(self):
         return len(self.windows)
     
     def __getitem__(self, idx):
+        if self.return_labels:
+            return self.windows[idx], self.labels[idx]
         return self.windows[idx]
 
 
@@ -282,23 +290,23 @@ class DataPreprocessor:
         
         return windows
     
-    def normalize_windows_per_sample(self, windows: np.ndarray) -> np.ndarray:
+    def normalize_windows_per_sample(self, windows_data: np.ndarray) -> np.ndarray:
         """
         Apply per-window normalization to focus on signal shape rather than absolute values.
         Each window is normalized independently using its own statistics.
         
         Args:
-            windows: Array of shape (n_windows, 3, 240)
+            windows_data: Array of shape (n_windows, 3, 240)
             
         Returns:
             Normalized array of same shape
         """
-        normalized = windows.copy()
+        normalized = windows_data.copy()
         
         # Normalize each window independently
-        for i in range(len(windows)):
+        for i in range(len(windows_data)):
             for channel in range(3):
-                signal = windows[i, channel, :]  # Shape: (240,)
+                signal = windows_data[i, channel, :]  # Shape: (240,)
                 
                 # Check for NaN or inf values in the signal
                 if np.any(np.isnan(signal)) or np.any(np.isinf(signal)):
@@ -329,7 +337,7 @@ class DataPreprocessor:
                     # For constant signals, center around zero
                     normalized[i, channel, :] = signal - mean
         
-        print(f"Applied per-window normalization to {len(windows)} windows")
+        print(f"Applied per-window normalization to {len(windows_data)} windows")
         return normalized
     
     def process_all_subjects(self):
@@ -352,29 +360,37 @@ class DataPreprocessor:
             print(f"Processing {split_name} split ({len(subjects)} subjects)...")
             
             split_windows = []
-            for subject in subjects:
+            split_labels = []  # To store subject labels
+            for i, subject in enumerate(subjects):
                 sr = sampling_info[subject]['sampling_rate']
                 windows = self.process_subject(subject, sr)
                 split_windows.append(windows)
+                split_labels.extend([i] * len(windows))  # Use integer index as label
                 print(f"  {subject}: {len(windows)} windows")
             
             # Concatenate all windows for this split
             if split_windows:
-                all_windows[split_name] = np.concatenate(split_windows, axis=0)
+                all_windows[split_name] = {
+                    'windows': np.concatenate(split_windows, axis=0),
+                    'labels': np.array(split_labels)
+                }
             else:
-                all_windows[split_name] = np.array([]).reshape(0, 3, int(self.window_len * self.target_rate))
+                all_windows[split_name] = {
+                    'windows': np.array([]).reshape(0, 3, int(self.window_len * self.target_rate)),
+                    'labels': np.array([])
+                }
         
         # Apply per-window normalization to all splits
         for split_name in splits.keys():
-            if len(all_windows[split_name]) > 0:
+            if len(all_windows[split_name]['windows']) > 0:
                 print(f"Normalizing {split_name} split...")
-                all_windows[split_name] = self.normalize_windows_per_sample(all_windows[split_name])
+                all_windows[split_name]['windows'] = self.normalize_windows_per_sample(all_windows[split_name]['windows'])
         
         # Save processed data
-        for split_name, windows in all_windows.items():
+        for split_name, data_dict in all_windows.items():
             save_path = self.out_dir / f'{split_name}_windows.npz'
-            np.savez_compressed(save_path, windows=windows)
-            print(f"Saved {split_name}: {windows.shape} to {save_path}")
+            np.savez_compressed(save_path, windows=data_dict['windows'], labels=data_dict['labels'])
+            print(f"Saved {split_name}: {data_dict['windows'].shape} to {save_path}")
         
         return all_windows
     
