@@ -3,6 +3,7 @@
 This project implements a Multimodal Autoencoder (MiMo-AE), designed to learn robust and compressed representations from various physiological signals simultaneously. The model supports multiple fusion strategies and includes comprehensive evaluation tools for comparing different approaches within current datasets size.
 
 ## Project Structure
+![Data Structure](assets/images/data_structure.png)
 
 ```
 .
@@ -26,13 +27,6 @@ This project implements a Multimodal Autoencoder (MiMo-AE), designed to learn ro
 └── README.md            # This file
 ```
 
-## Data Structure
-
-The project follows a structured data organization as shown below:
-
-![Data Structure](assets/images/data_structure.png)
-
-*Data structure visualization showing the organization of input signals and processing pipeline*
 
 ## Key Features
 - **Multimodal Architecture**: Utilizes encoders for each signal modality (BP, respiratory, PPG) to learn specialized features before fusing them into a shared representation.
