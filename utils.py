@@ -338,7 +338,6 @@ class ReconVisualizer:
         ax.legend()
         ax.grid(True, alpha=0.1)
         
-        # Hide unused subplot
         axes[3].axis('off')
         
         plt.tight_layout()
@@ -387,8 +386,7 @@ def setup_wandb(config: Dict, model: nn.Module) -> None:
         notes=wandb_config.get('notes', ''),
         config=config
     )
-    
-    # Watch model
+     
     wandb.watch(model, log_freq=100)
 
 
@@ -426,5 +424,4 @@ def create_lr_scheduler(
         raise ValueError(f"Unknown scheduler type: {scheduler_type}")
 
 if __name__ == '__main__':
-    config = load_config('config.yaml')
-    print(config)
+    pass
