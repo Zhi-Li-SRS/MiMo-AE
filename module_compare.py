@@ -24,19 +24,16 @@ from typing import Dict, List, Tuple, Optional
 import warnings
 warnings.filterwarnings('ignore')
 
-# Configure matplotlib for bold fonts globally
-plt.rcParams['font.weight'] = 'bold'
-plt.rcParams['axes.labelweight'] = 'bold'
-plt.rcParams['axes.titleweight'] = 'bold'
-plt.rcParams['figure.titleweight'] = 'bold'
-
-# Local imports
 from model import MiMoAE
 from loss import create_loss_function
 from data_prepare import MultimodalDataset
 from utils import load_config, set_random_seed
 from torch.utils.data import DataLoader
 
+plt.rcParams['font.weight'] = 'bold'
+plt.rcParams['axes.labelweight'] = 'bold'
+plt.rcParams['axes.titleweight'] = 'bold'
+plt.rcParams['figure.titleweight'] = 'bold'
 
 def ssim_1d(x, y, window_size=11, sigma=1.5):
     """

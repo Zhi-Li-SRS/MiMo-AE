@@ -38,11 +38,11 @@ echo "🔍 Checking WANDB configuration..."
 
 # Start training
 echo ""
-echo "🎯 Starting training..."
+echo " Starting training..."
 echo "=============================="
 
 python train.py
 
 echo ""
-echo "🏁 Training completed!"
+echo " Training completed!"
 echo "Check outputs/ directory for results"
