@@ -1,6 +1,6 @@
 # Data directories - too large for git
 cleaned_data/
-data/
+raw_data/
 processed_data/
 
 # Python cache and compiled files
