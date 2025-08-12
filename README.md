@@ -3,8 +3,6 @@
 This project implements a Multimodal Autoencoder (MiMo-AE), designed to learn robust and compressed representations from various physiological signals simultaneously. The model supports multiple fusion strategies and includes comprehensive evaluation tools for comparing different approaches within current datasets size.
 
 ## Project Structure
-![Data Structure](assets/images/image.png)
-
 ```
 .
 ├── cleaned_data/         # filtered data with only the columns of interest
